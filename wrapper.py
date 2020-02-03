@@ -16,7 +16,6 @@ from bokeh.models import HoverTool
 class Converter:
     def __init__(self):
         super(Converter, self).__init__()
-        hv.extension('bokeh', 'matplotlib')
 
     def sdds_to_pandas(self, *colnames, file='results/beamline.mag'):
         try:
@@ -53,30 +52,10 @@ class Converter:
             element_width = 0.5  # m
             data_frame['X'] = x0(s) + element_width * data_frame['Profile'] * nx
             data_frame['Z'] = z0(s) + element_width * data_frame['Profile'] * nz
-
-            dim_x = hv.Dimension('X', label='X', unit='m')
-            dim_z = hv.Dimension('Z', label='Z', unit='m', range=(-32, +32))
-            curve = hv.Curve((data_frame.Z, data_frame.X), kdims=dim_z, vdims=dim_x)
-            curve.opts(width=700, height=400, show_frame=False, show_title=False, xaxis=None, yaxis=None,
-                       show_grid=True, tools=['box_zoom', 'pan', 'wheel_zoom', 'reset'], color='blue', alpha=0.3)
-            return curve
+            return data_frame
         except Exception as exp:
             print(exp)
             return None
-
-    def plot_structure(self, to_plot):
-        if isinstance(to_plot, pd.DataFrame):
-            return self._plot_stru(to_plot)
-        if isinstance(to_plot, str):
-            data_frame = self.sdds_to_pandas(*['ElementName', 's', 'Profile'], file=to_plot)
-            return self._plot_stru(data_frame)
-
-    def plot_function(self, to_plot, func='betax', color='red', label='βx'):
-        if isinstance(to_plot, pd.DataFrame):
-            return self._plot_func(to_plot, func, color, label)
-        elif isinstance(to_plot, str):
-            data_frame = self.sdds_to_pandas(*['ElementName', 's', func], file=to_plot)
-            return self._plot_func(data_frame, func, color, label)
 
     @staticmethod
     def res_diag(order=3):
@@ -112,17 +91,43 @@ class Converter:
                         lines_coor.append([(nu_b, 0.0), (1.0, -1 * (n - order + i) / i)])
         return lines_coor
 
-    @staticmethod
-    def res_diag_to_hv(points_list, color='red'):
-        x = hv.Dimension('ν_x', range=(0, 1))
-        y = hv.Dimension('ν_y', range=(0, 1))
-        path = hv.Path(points_list, [x, y])
-        path.opts(width=700, height=700, color=color, line_width=1)
-        return path
+    #####################
+    # class system part #
+    #####################
 
     @staticmethod
-    def res_diag_to_pg(points_list, color='r'):
-        pass
+    def _names_parser(names):
+        cmd_str = '-col='
+        for elem in names:
+            cmd_str = cmd_str + elem + ','
+        return cmd_str[:-1]
+
+
+class HvGraphics:
+    def __init__(self, extension='bokeh'):
+        super(HvGraphics, self).__init__()
+        hv.extension(extension)
+
+    def plot_structure(self, to_plot):
+        if isinstance(to_plot, pd.DataFrame):
+            return self._plot_stru(to_plot)
+        if isinstance(to_plot, str):
+            data_frame = Converter().sdds_to_pandas(*['ElementName', 's', 'Profile'], file=to_plot)
+            return self._plot_stru(data_frame)
+
+    def plot_function(self, to_plot, func='betax', color='red', label='βx'):
+        if isinstance(to_plot, pd.DataFrame):
+            return self._plot_func(to_plot, func, color, label)
+        elif isinstance(to_plot, str):
+            data_frame = Converter().sdds_to_pandas(*['ElementName', 's', func], file=to_plot)
+            return self._plot_func(data_frame, func, color, label)
+
+    def acc_view_plot(self, to_plot):
+        if isinstance(to_plot, pd.DataFrame):
+            return self._view_plot(to_plot)
+        if isinstance(to_plot, str):
+            data_frame = Converter().sdds_to_pandas(file=to_plot)
+            return self._view_plot(data_frame)
 
     @staticmethod
     def machine_freqs(bet_x, bet_y):
@@ -133,19 +138,17 @@ class Converter:
         path.opts(color=color, line_width=4)
         return path
 
-    #######################
-    # library system part #
-    #######################
-
     @staticmethod
-    def _plot_func(data_frame, func, color, label):
-        dim_s = hv.Dimension('s', unit='m', label="s")
-        data = getattr(data_frame, func)
-        dim_y = hv.Dimension(func, unit='m', label=label, range=(0, 1.1 * max(data)))
-        curve = hv.Curve((data_frame.s, data), label=label, kdims=dim_s, vdims=dim_y)
-        curve.opts(color=color, alpha=0.7, line_width=3, width=700, height=300, show_grid=True,
-                   tools=['box_zoom', 'pan', 'wheel_zoom', 'reset'])
-        return curve
+    def res_diag(points_list, color='red'):
+        x = hv.Dimension('ν_x', range=(0, 1))
+        y = hv.Dimension('ν_y', range=(0, 1))
+        path = hv.Path(points_list, [x, y])
+        path.opts(width=700, height=700, color=color, line_width=1)
+        return path
+
+    #####################
+    # class system part #
+    #####################
 
     @staticmethod
     def _plot_stru(data_frame):
@@ -158,11 +161,23 @@ class Converter:
         return mag
 
     @staticmethod
-    def _names_parser(names):
-        cmd_str = '-col='
-        for elem in names:
-            cmd_str = cmd_str + elem + ','
-        return cmd_str[:-1]
+    def _plot_func(data_frame, func, color, label):
+        dim_s = hv.Dimension('s', unit='m', label="s")
+        data = getattr(data_frame, func)
+        dim_y = hv.Dimension(func, unit='m', label=label, range=(0, 1.1 * max(data)))
+        curve = hv.Curve((data_frame.s, data), label=label, kdims=dim_s, vdims=dim_y)
+        curve.opts(color=color, alpha=0.7, line_width=3, width=700, height=300, show_grid=True,
+                   tools=['box_zoom', 'pan', 'wheel_zoom', 'reset'])
+        return curve
+
+    @staticmethod
+    def _view_plot(data_frame):
+        dim_x = hv.Dimension('X', label='X', unit='m')
+        dim_z = hv.Dimension('Z', label='Z', unit='m', range=(-32, +32))
+        curve = hv.Curve((data_frame.Z, data_frame.X), kdims=dim_z, vdims=dim_x)
+        curve.opts(width=700, height=400, show_frame=False, show_title=False, xaxis=None, yaxis=None,
+                   show_grid=True, tools=['box_zoom', 'pan', 'wheel_zoom', 'reset'], color='blue', alpha=0.3)
+        return curve
 
 
 if __name__ == "__main__":
