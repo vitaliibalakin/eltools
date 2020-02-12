@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from PyQt5.QtWidgets import QApplication
+from PyQt5 import QtCore, QtGui
 import sys
 import numpy as np
 import math
@@ -11,6 +12,8 @@ from io import StringIO
 
 import holoviews as hv
 from bokeh.models import HoverTool
+
+import pyqtgraph as pg
 
 
 class Converter:
@@ -89,6 +92,7 @@ class Converter:
                     elif nu_e > 1:
                         lines_coor.append([(0.0, nu_b), (-1 * (n - order + i) / i, 1.0)])
                         lines_coor.append([(nu_b, 0.0), (1.0, -1 * (n - order + i) / i)])
+        print(lines_coor)
         return lines_coor
 
     #####################
@@ -130,7 +134,7 @@ class HvGraphics:
             return self._view_plot(data_frame)
 
     @staticmethod
-    def machine_freqs(bet_x, bet_y):
+    def tunes(bet_x, bet_y):
         bet_x -= math.floor(bet_x)
         bet_y -= math.floor(bet_y)
         color = '#30d5c8'
@@ -179,11 +183,76 @@ class HvGraphics:
                    show_grid=True, tools=['box_zoom', 'pan', 'wheel_zoom', 'reset'], color='blue', alpha=0.3)
         return curve
 
+################################
+# tools for pyqtgraph plotting #
+################################
+
+
+class LinesPlot(pg.GraphicsObject):
+    def __init__(self, lines_coor, **kwargs):
+        pg.GraphicsObject.__init__(self)
+        self.picture = None
+        self.lines_coor = lines_coor
+        self.order = kwargs.get('order', 3)
+        self.color = kwargs.get('color', QtCore.Qt.darkCyan)
+        self.point_obj()
+
+    def point_obj(self):
+        self.picture = pg.QtGui.QPicture()
+        p = pg.QtGui.QPainter(self.picture)
+        p.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        p.setPen(QtGui.QPen(self.color, 0.005 / self.order))
+        lines = [QtCore.QLineF(QtCore.QPointF(0, 0), QtCore.QPointF(0, 1)),
+                 QtCore.QLineF(QtCore.QPointF(0, 0), QtCore.QPointF(1, 0)),
+                 QtCore.QLineF(QtCore.QPointF(1, 1), QtCore.QPointF(0, 1)),
+                 QtCore.QLineF(QtCore.QPointF(1, 1), QtCore.QPointF(1, 0))]
+        for line_coor in self.lines_coor:
+            lines.append(QtCore.QLineF(QtCore.QPointF(line_coor[0][0], line_coor[0][1]),
+                                       QtCore.QPointF(line_coor[1][0], line_coor[1][1])))
+        p.drawLines(lines)
+        p.end()
+
+    def paint(self, p, *args):
+        p.drawPicture(0, 0, self.picture)
+
+    def boundingRect(self):
+        return pg.QtCore.QRectF(self.picture.boundingRect())
+
+
+class TunesMarker(pg.GraphicsObject):
+    def __init__(self, **kwargs):
+        pg.GraphicsObject.__init__(self)
+        self.picture = None
+        self.x = kwargs.get('x', 0)
+        self.y = kwargs.get('y', 0)
+        self.color = kwargs.get('color', QtCore.Qt.red)
+        self.point_obj()
+
+    def point_obj(self):
+        self.picture = pg.QtGui.QPicture()
+        p = pg.QtGui.QPainter(self.picture)
+        p.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        p.setPen(QtGui.QPen(self.color, 0.0075, QtCore.Qt.SolidLine))
+        lines = [
+            QtCore.QLineF(QtCore.QPointF(self.x - 0.015, self.y - 0.015),
+                          QtCore.QPointF(self.x + 0.015, self.y + 0.015)),
+            QtCore.QLineF(QtCore.QPointF(self.x + 0.015, self.y - 0.015),
+                          QtCore.QPointF(self.x - 0.015, self.y + 0.015))
+        ]
+        p.drawLines(lines)
+        p.end()
+
+    def update_pos(self, pos):
+        self.setPos(pos[0], pos[1])
+
+    def paint(self, p, *args):
+        p.drawPicture(0, 0, self.picture)
+
+    def boundingRect(self):
+        return pg.QtCore.QRectF(self.picture.boundingRect())
+
 
 if __name__ == "__main__":
     app = QApplication(['eltools'])
     w = Converter()
-    # a = w.res_diag(7)
-    # b = w.res_diag_to_hv(a)
-    # print(5)
     sys.exit(app.exec_())
