@@ -92,7 +92,6 @@ class Converter:
                     elif nu_e > 1:
                         lines_coor.append([(0.0, nu_b), (-1 * (n - order + i) / i, 1.0)])
                         lines_coor.append([(nu_b, 0.0), (1.0, -1 * (n - order + i) / i)])
-        print(lines_coor)
         return lines_coor
 
     #####################
