@@ -110,26 +110,27 @@ class HvGraphics:
     def __init__(self, extension='bokeh'):
         super(HvGraphics, self).__init__()
         hv.extension(extension)
+        self.cnv = Converter()
 
     def plot_structure(self, to_plot):
         if isinstance(to_plot, pd.DataFrame):
             return self._plot_stru(to_plot)
         if isinstance(to_plot, str):
-            data_frame = Converter().sdds_to_pandas(*['ElementName', 's', 'Profile'], file=to_plot)
+            data_frame = self.cnv.sdds_to_pandas(*['ElementName', 's', 'Profile'], file=to_plot)
             return self._plot_stru(data_frame)
 
     def plot_function(self, to_plot, func='betax', color='red', label='βx'):
         if isinstance(to_plot, pd.DataFrame):
             return self._plot_func(to_plot, func, color, label)
         elif isinstance(to_plot, str):
-            data_frame = Converter().sdds_to_pandas(*['ElementName', 's', func], file=to_plot)
+            data_frame = self.cnv.sdds_to_pandas(*['ElementName', 's', func], file=to_plot)
             return self._plot_func(data_frame, func, color, label)
 
     def acc_view_plot(self, to_plot):
         if isinstance(to_plot, pd.DataFrame):
             return self._view_plot(to_plot)
         if isinstance(to_plot, str):
-            data_frame = Converter().sdds_to_pandas(file=to_plot)
+            data_frame = self.cnv.sdds_to_pandas(file=to_plot)
             return self._view_plot(data_frame)
 
     @staticmethod
