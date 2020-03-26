@@ -219,6 +219,48 @@ class LinesPlot(pg.GraphicsObject):
         return pg.QtCore.QRectF(self.picture.boundingRect())
 
 
+class PyqtStructure(pg.GraphicsObject):
+    def __init__(self, structure):
+        pg.GraphicsObject.__init__(self)
+        self.picture = None
+        self.e2draw = ['QUAD']
+        self.structure = structure
+        self.structure_parser()
+
+    def structure_parser(self):
+        e2draw = self.e2draw
+        e_beg = self.structure['s'][0]
+        line_counter = 0
+        e_end = -1
+        cur_type = self.structure['ElementType'][0]
+        for e_type in self.structure['ElementType']:
+            if (e_type in e2draw) and (e_type != cur_type):
+                e_end = self.structure['s'][line_counter - 1]
+                self.point_obj(e_beg, e_end)
+                e_beg = self.structure['s'][line_counter]
+                e_end = -1
+                cur_type = self.structure['ElementType'][line_counter]
+            line_counter += 1
+
+    def point_obj(self, beg, end):
+        self.picture = pg.QtGui.QPicture()
+        p = pg.QtGui.QPainter(self.picture)
+        p.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        p.setPen(QtGui.QPen(self.color, 0.005 / self.order))
+        line = [QtCore.QLineF(QtCore.QPointF(beg, 1), QtCore.QPointF(end, 1)),
+                 QtCore.QLineF(QtCore.QPointF(end, 1), QtCore.QPointF(end, -1)),
+                 QtCore.QLineF(QtCore.QPointF(end, -1), QtCore.QPointF(beg, -1)),
+                 QtCore.QLineF(QtCore.QPointF(beg, -1), QtCore.QPointF(beg, 1))]
+        p.drawLines(line)
+        p.end()
+
+    def paint(self, p, *args):
+        p.drawPicture(0, 0, self.picture)
+
+    def boundingRect(self):
+        return pg.QtCore.QRectF(self.picture.boundingRect())
+
+
 class TunesMarker(pg.GraphicsObject):
     def __init__(self, **kwargs):
         pg.GraphicsObject.__init__(self)
