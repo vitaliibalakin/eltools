@@ -168,7 +168,7 @@ class HvGraphics:
     def _plot_func(data_frame, func, color, label):
         dim_s = hv.Dimension('s', unit='m', label="s")
         data = getattr(data_frame, func)
-        dim_y = hv.Dimension(func, unit='m', label=label, range=(0, 1.1 * max(data)))
+        dim_y = hv.Dimension(func, unit='m', label=label, range=(1.1 * min(data), 1.1 * max(data)))
         curve = hv.Curve((data_frame.s, data), label=label, kdims=dim_s, vdims=dim_y)
         curve.opts(color=color, alpha=0.7, line_width=3, width=700, height=300, show_grid=True,
                    tools=['box_zoom', 'pan', 'wheel_zoom', 'reset'])
